@@ -495,11 +495,11 @@ export function useChessGame() {
 
                     // Categorize based on win percentage change
                     let quality;
-                    if (winProbChange >= 20) quality = 'Excellent';
-                    else if (winProbChange >= 10) quality = 'Good';
-                    else if (winProbChange > -10) quality = 'Neutral';
-                    else if (winProbChange > -20) quality = 'Bad';
-                    else quality = 'Terrible';
+                    if (winProbChange >= 20) quality = 'Excellent';      // +20% or more
+                    else if (winProbChange >= 10) quality = 'Good';      // +10% to +20%
+                    else if (winProbChange > -10) quality = 'Neutral';   // -10% to +10%
+                    else if (winProbChange > -15) quality = 'Bad';       // -10% to -15%
+                    else quality = 'Terrible';                          // -15% or worse
 
                     const alternatives = altMoves.filter(m => m !== move.san);
                     const gamePhase = getGamePhase(chess);

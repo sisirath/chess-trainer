@@ -154,47 +154,37 @@ export default function AnalysisPanel({
     };
 
     const getExplanation = (entry) => {
-        const evalChange = entry.evalChange || 0;
+        const winProbChange = entry.winProbChange || 0;
         const gamePhase = entry.gamePhase || 'middlegame';
         const phaseText = gamePhase === 'opening' ? 'opening' : gamePhase === 'endgame' ? 'endgame' : 'middlegame';
         
         if (entry.quality === 'Excellent') {
             if (entry.captured) {
                 const capturedPiece = PIECE_NAMES[entry.captured];
-                return `🏆 Brilliant tactical strike! Capturing the ${capturedPiece} in the ${phaseText} creates a decisive advantage and demonstrates excellent calculation.`;
+                return `🏆 Brilliant tactical strike! Capturing the ${capturedPiece} improved your win probability by ${winProbChange.toFixed(1)}% - a decisive advantage in the ${phaseText}!`;
             }
-            if (evalChange > 200) {
-                return `🏆 Outstanding move! This creates a winning position and shows superior tactical vision. Your opponent will struggle to find adequate defense.`;
-            }
-            return `🏆 Excellent choice! This critical move significantly improves your position and creates multiple threats that are difficult to handle.`;
+            return `🏆 Outstanding move! This increased your win probability by ${winProbChange.toFixed(1)}%, creating a significant advantage and demonstrating excellent tactical vision.`;
         }
         
         if (entry.quality === 'Good') {
             if (entry.captured) {
                 const capturedPiece = PIECE_NAMES[entry.captured];
-                return `✅ Strong tactical play! Taking the ${capturedPiece} improves your position while maintaining good piece coordination.`;
+                return `✅ Strong tactical play! Taking the ${capturedPiece} improved your win probability by ${winProbChange.toFixed(1)}% while maintaining good piece coordination.`;
             }
-            if (evalChange > 75) {
-                return `✅ Very good move! This significantly improves your position and creates new tactical possibilities for the ${phaseText}.`;
-            }
-            return `✅ Solid positional choice! This move strengthens your position and maintains good control over key squares.`;
+            return `✅ Solid positional choice! This move improved your win probability by ${winProbChange.toFixed(1)}% and strengthens your position in the ${phaseText}.`;
         }
         
         if (entry.quality === 'Neutral') {
-            if (Math.abs(evalChange) < 15) {
-                return `⚪ Reasonable move that keeps the position balanced. While not creating immediate threats, it maintains equality in the ${phaseText}.`;
-            }
-            return `⚪ Standard ${phaseText} play. This move doesn't change the evaluation significantly but keeps your position solid.`;
+            const changeText = winProbChange >= 0 ? `improved by ${winProbChange.toFixed(1)}%` : `decreased by ${Math.abs(winProbChange).toFixed(1)}%`;
+            return `⚪ Reasonable move that ${changeText} your win probability. This maintains a balanced position without major tactical consequences in the ${phaseText}.`;
         }
         
         if (entry.quality === 'Bad') {
-            let feedback = `⚠️ This move misses a better opportunity in the ${phaseText}. `;
+            let feedback = `⚠️ This move decreased your win probability by ${Math.abs(winProbChange).toFixed(1)}%, missing a better opportunity in the ${phaseText}. `;
             
-            if (entry.captured && evalChange < -30) {
+            if (entry.captured) {
                 const capturedPiece = PIECE_NAMES[entry.captured];
                 feedback += `While you captured the ${capturedPiece}, this exchange actually favors your opponent. `;
-            } else if (evalChange < -75) {
-                feedback += `This significantly worsens your position when better moves were available. `;
             }
             
             if (entry.bestMissed) {
@@ -210,15 +200,13 @@ export default function AnalysisPanel({
         }
         
         if (entry.quality === 'Terrible') {
-            let feedback = `❌ This move creates serious problems in the ${phaseText}. `;
+            let feedback = `❌ This move severely damaged your position, decreasing your win probability by ${Math.abs(winProbChange).toFixed(1)}% in the ${phaseText}. `;
             
             if (entry.captured) {
                 const capturedPiece = PIECE_NAMES[entry.captured];
                 feedback += `Losing the ${capturedPiece} here gives your opponent a decisive advantage. `;
-            } else if (evalChange < -150) {
-                feedback += `This move hands your opponent a winning position and may have decided the game. `;
             } else {
-                feedback += `This significantly damages your position and gives your opponent excellent winning chances. `;
+                feedback += `This hands your opponent excellent winning chances. `;
             }
             
             if (entry.bestMissed) {
@@ -237,14 +225,16 @@ export default function AnalysisPanel({
     };
 
     const getRecommendation = (entry) => {
+        const winProbChange = entry.winProbChange || 0;
+        
         if (entry.quality === 'Excellent') {
-            return "Keep looking for these critical tactical opportunities that can decide the game in your favor!";
+            return `Excellent! This move improved your win probability by ${winProbChange.toFixed(1)}%. Keep looking for these game-changing opportunities!`;
         }
         
         if (entry.bestMissed) {
             const desc = describeMove(entry.bestMissed, entry.piece, entry.from, entry.to, entry.captured);
             if (desc) {
-                return `${entry.bestMissed} - You should have ${desc} to gain tactical superiority and improve your winning chances.`;
+                return `${entry.bestMissed} - You should have ${desc} to avoid losing ${Math.abs(winProbChange).toFixed(1)}% win probability.`;
             }
         }
         
@@ -252,20 +242,21 @@ export default function AnalysisPanel({
             const altMove = entry.alternatives[0];
             const altDesc = describeMove(altMove, entry.piece, entry.from, entry.to);
             if (altDesc) {
-                return `Consider ${altMove} - ${altDesc} to maintain better positional control.`;
+                return `Consider ${altMove} - ${altDesc} to maintain better winning chances.`;
             }
-            return `Consider ${altMove} to maintain a stronger evaluation.`;
+            return `Consider ${altMove} to avoid decreasing your win probability.`;
         }
         
-        // Quality-specific general advice
-        if (entry.quality === 'Bad' || entry.quality === 'Terrible') {
-            if (entry.captured) {
-                return "Before making exchanges, calculate if the trade improves your position and piece activity.";
-            }
-            return "Look for moves that improve piece coordination, control key squares, and create tactical threats.";
+        // Quality-specific advice based on win probability impact
+        if (entry.quality === 'Bad') {
+            return `This move cost you ${Math.abs(winProbChange).toFixed(1)}% win probability. Look for moves that improve piece coordination and control key squares.`;
         }
         
-        return "Focus on developing pieces actively, controlling the center, and ensuring King safety.";
+        if (entry.quality === 'Terrible') {
+            return `This move severely damaged your position (-${Math.abs(winProbChange).toFixed(1)}% win probability). Focus on protecting key pieces and maintaining defensive coordination.`;
+        }
+        
+        return "Focus on moves that maintain or improve your winning chances.";
     };
 
     const totalStats = Object.values(moveStats).reduce((a, b) => a + b, 0);
