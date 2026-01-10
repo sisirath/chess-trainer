@@ -767,3 +767,48 @@
         display: none; /* Hide toggle labels on very small screens */
     }
 }
+/* Collapsible Widget Styles */
+.widget-header.clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.widget-header.clickable:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.collapse-icon {
+    transition: transform 0.3s ease;
+    opacity: 0.6;
+}
+
+.collapse-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.analysis-widget.collapsed {
+    min-height: auto;
+}
+
+.analysis-widget.collapsed .widget-content {
+    display: none;
+}
+
+.analysis-widget.collapsed .resizer {
+    display: none;
+}
+
+/* Smooth transitions for collapsing */
+.analysis-widget {
+    transition: height 0.3s ease, min-height 0.3s ease;
+}
+
+.widget-content {
+    transition: opacity 0.2s ease;
+}

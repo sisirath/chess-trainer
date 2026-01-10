@@ -44,9 +44,24 @@ export default function AnalysisPanel({
     });
     const [showAllMoves, setShowAllMoves] = useState(false);
     const [alwaysExpand, setAlwaysExpand] = useState(false);
+    
+    // Collapsible sections state
+    const [collapsed, setCollapsed] = useState({
+        prob: false,
+        stats: false,
+        history: false
+    });
 
     const isResizing = useRef(null);
     const prevIsThinking = useRef(isThinking);
+
+    // Toggle section collapse
+    const toggleSection = (section) => {
+        setCollapsed(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    };
 
     // Sync display probability after thinking finishes
     useEffect(() => {
@@ -299,18 +314,22 @@ export default function AnalysisPanel({
 
             {/* Win Probability / Killed Pieces Widget */}
             <div
-                className={`analysis-widget prob-widget ${heights.prob < 140 ? 'condensed' : ''}`}
+                className={`analysis-widget prob-widget ${heights.prob < 140 ? 'condensed' : ''} ${collapsed.prob ? 'collapsed' : ''}`}
                 style={{
-                    height: !showProb ? Math.max(heights.prob, 250) : heights.prob,
+                    height: collapsed.prob ? 'auto' : (!showProb ? Math.max(heights.prob, 250) : heights.prob),
                     flexShrink: 0
                 }}
             >
-                <div className="widget-header">
+                <div className="widget-header clickable" onClick={() => toggleSection('prob')}>
                     <div className="header-title">
                         <h3>{showProb ? 'Position Analysis' : 'Casualties'}</h3>
                         {showProb ? <TrendingUp size={16} opacity={0.5} /> : <Skull size={16} opacity={0.5} />}
+                        <ChevronDown 
+                            size={16} 
+                            className={`collapse-icon ${collapsed.prob ? 'collapsed' : ''}`}
+                        />
                     </div>
-                    <div className="header-actions">
+                    <div className="header-actions" onClick={(e) => e.stopPropagation()}>
                         <label className="toggle-switch" title={beastMode ? "Beast Mode: AI plays to win ASAP" : "Enable Beast Mode"}>
                             <input
                                 type="checkbox"
@@ -331,8 +350,9 @@ export default function AnalysisPanel({
                         </label>
                     </div>
                 </div>
-                <div className="widget-content">
-                    <AnimatePresence mode="wait">
+                {!collapsed.prob && (
+                    <div className="widget-content">
+                        <AnimatePresence mode="wait">
                         {showProb ? (
                             <motion.div
                                 key="combined-view"
@@ -426,41 +446,56 @@ export default function AnalysisPanel({
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </div>
-                <div className="resizer" onMouseDown={() => startResizing('prob')} />
+                    </div>
+                )}
+                {!collapsed.prob && <div className="resizer" onMouseDown={() => startResizing('prob')} />}
             </div>
 
             {/* Stats Widget */}
-            <div className={`analysis-widget stats-widget ${heights.stats < 150 ? 'condensed' : ''}`} style={{ height: heights.stats, flexShrink: 0 }}>
-                <div className="widget-header">
-                    <h3>Move Analysis Stats</h3>
-                    <Award size={16} opacity={0.5} />
-                </div>
-                <div className="widget-content">
-                    <div className="quality-bar-mini">
-                        {['Excellent', 'Good', 'Neutral', 'Bad', 'Terrible'].map(q => {
-                            const pct = totalStats > 0 ? (moveStats[q] / totalStats) * 100 : 0;
-                            return <div key={q} className={`q-seg ${q.toLowerCase()}`} style={{ width: `${pct}%` }} />;
-                        })}
-                    </div>
-                    <div className="stats-legend-grid">
-                        {['Excellent', 'Good', 'Neutral', 'Bad', 'Terrible'].map(q => (
-                            <div key={q} className="stat-pill">
-                                <span className={`dot ${q.toLowerCase()}`} />
-                                <span className="label">{q}</span>
-                                <span className="val">{moveStats[q]}</span>
-                            </div>
-                        ))}
+            <div className={`analysis-widget stats-widget ${heights.stats < 150 ? 'condensed' : ''} ${collapsed.stats ? 'collapsed' : ''}`} style={{ height: collapsed.stats ? 'auto' : heights.stats, flexShrink: 0 }}>
+                <div className="widget-header clickable" onClick={() => toggleSection('stats')}>
+                    <div className="header-title">
+                        <h3>Move Analysis Stats</h3>
+                        <Award size={16} opacity={0.5} />
+                        <ChevronDown 
+                            size={16} 
+                            className={`collapse-icon ${collapsed.stats ? 'collapsed' : ''}`}
+                        />
                     </div>
                 </div>
-                <div className="resizer" onMouseDown={() => startResizing('stats')} />
+                {!collapsed.stats && (
+                    <div className="widget-content">
+                        <div className="quality-bar-mini">
+                            {['Excellent', 'Good', 'Neutral', 'Bad', 'Terrible'].map(q => {
+                                const pct = totalStats > 0 ? (moveStats[q] / totalStats) * 100 : 0;
+                                return <div key={q} className={`q-seg ${q.toLowerCase()}`} style={{ width: `${pct}%` }} />;
+                            })}
+                        </div>
+                        <div className="stats-legend-grid">
+                            {['Excellent', 'Good', 'Neutral', 'Bad', 'Terrible'].map(q => (
+                                <div key={q} className="stat-pill">
+                                    <span className={`dot ${q.toLowerCase()}`} />
+                                    <span className="label">{q}</span>
+                                    <span className="val">{moveStats[q]}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {!collapsed.stats && <div className="resizer" onMouseDown={() => startResizing('stats')} />}
             </div>
 
             {/* Move History Widget */}
-            <div className="analysis-widget history-widget" style={{ flex: 1, minHeight: 150 }}>
-                <div className="widget-header">
-                    <h3>Move History & Logic</h3>
-                    <div className="header-actions">
+            <div className={`analysis-widget history-widget ${collapsed.history ? 'collapsed' : ''}`} style={{ flex: collapsed.history ? 'none' : 1, minHeight: collapsed.history ? 'auto' : 150 }}>
+                <div className="widget-header clickable" onClick={() => toggleSection('history')}>
+                    <div className="header-title">
+                        <h3>Move History & Logic</h3>
+                        <ChevronDown 
+                            size={16} 
+                            className={`collapse-icon ${collapsed.history ? 'collapsed' : ''}`}
+                        />
+                    </div>
+                    <div className="header-actions" onClick={(e) => e.stopPropagation()}>
                         <label className="toggle-switch" title="Show Computer Moves">
                             <input
                                 type="checkbox"
@@ -481,9 +516,10 @@ export default function AnalysisPanel({
                         </label>
                     </div>
                 </div>
-                <div className="widget-content history-scroll">
-                    {moveHistory.length === 0 ? (
-                        <div className="empty-history">
+                {!collapsed.history && (
+                    <div className="widget-content history-scroll">
+                        {moveHistory.length === 0 ? (
+                            <div className="empty-history">
                             <Lightbulb size={32} opacity={0.2} />
                             <p>Play a move to start analysis</p>
                         </div>
@@ -543,9 +579,10 @@ export default function AnalysisPanel({
                                     </motion.div>
                                 );
                             })
-                    )}
-                </div>
-                <div className="resizer" onMouseDown={() => startResizing('history')} />
+                        )}
+                    </div>
+                )}
+                {!collapsed.history && <div className="resizer" onMouseDown={() => startResizing('history')} />}
             </div>
 
             {/* Computer Status */}
