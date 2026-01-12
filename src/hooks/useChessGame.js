@@ -187,7 +187,7 @@ export function useChessGame() {
             game.move(move);
             const score = minimax(game, depth - 1, -Infinity, Infinity, true);
             game.undo();
-            
+
             const resultingWinProb = scoreToWinProb(score);
             scoredMoves.push({ move, score, winProb: resultingWinProb });
         }
@@ -234,7 +234,7 @@ export function useChessGame() {
         } else {
             // Try to keep player around 38% win probability
             const targetMoves = scoredMoves.filter(m => m.winProb >= 30 && m.winProb <= 45);
-            
+
             if (targetMoves.length > 0) {
                 // Sort by how close to target
                 targetMoves.sort((a, b) => Math.abs(a.winProb - targetWinProb) - Math.abs(b.winProb - targetWinProb));
@@ -285,7 +285,7 @@ export function useChessGame() {
         const moveCount = game.history().length;
         const board = game.board();
         let materialCount = 0;
-        
+
         // Count major pieces (not pawns or kings)
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
@@ -295,7 +295,7 @@ export function useChessGame() {
                 }
             }
         }
-        
+
         if (moveCount < 20) return 'opening';
         if (materialCount <= 6) return 'endgame';
         return 'middlegame';
@@ -305,14 +305,14 @@ export function useChessGame() {
     const analyzeMoveQuality = useCallback((game, move, prevEval, bestMoveResult) => {
         const currentEval = minimax(game, 2, -Infinity, Infinity, false);
         const evalChange = currentEval - prevEval;
-        
+
         const gamePhase = getGamePhase(game);
-        
+
         // Calculate win percentage change
         const prevWinProb = calculateWinProbability(prevEval);
         const currentWinProb = calculateWinProbability(currentEval);
         const winProbChange = currentWinProb - prevWinProb;
-        
+
         // Categorize based on win percentage change
         let quality;
         if (winProbChange >= 20) {
@@ -326,7 +326,7 @@ export function useChessGame() {
         } else {
             quality = 'Terrible';   // -20% or worse win probability
         }
-        
+
         return {
             quality,
             evalChange,
@@ -449,7 +449,7 @@ export function useChessGame() {
             const scores = { Excellent: 2, Good: 1, Neutral: 0, Bad: -1, Terrible: -2 };
             return scores[q] || 0;
         });
-        
+
         if (recentQualityScores.length >= 5) {
             const avgRecent = recentQualityScores.reduce((a, b) => a + b, 0) / recentQualityScores.length;
             // Dampen extreme swings based on recent performance
@@ -461,7 +461,7 @@ export function useChessGame() {
         }
 
         // Apply adjustment with bounds
-        playerSkillRef.current = Math.max(600, Math.min(2600, 
+        playerSkillRef.current = Math.max(600, Math.min(2600,
             playerSkillRef.current + adjustment
         ));
     }, []);
@@ -495,11 +495,11 @@ export function useChessGame() {
 
                     // Categorize based on win percentage change
                     let quality;
-                    if (winProbChange >= 20) quality = 'Excellent';      // +20% or more
-                    else if (winProbChange >= 10) quality = 'Good';      // +10% to +20%
-                    else if (winProbChange > -10) quality = 'Neutral';   // -10% to +10%
-                    else if (winProbChange > -15) quality = 'Bad';       // -10% to -15%
-                    else quality = 'Terrible';                          // -15% or worse
+                    if (winProbChange >= 20) quality = 'Excellent';
+                    else if (winProbChange >= 10) quality = 'Good';
+                    else if (winProbChange > -10) quality = 'Neutral';
+                    else if (winProbChange > -20) quality = 'Bad';
+                    else quality = 'Terrible';
 
                     const alternatives = altMoves.filter(m => m !== move.san);
                     const gamePhase = getGamePhase(chess);
