@@ -54,7 +54,11 @@ export function useChessGame() {
     const recentMovesRef = useRef([]); // Track recent move qualities for smoother adaptation
     const consecutiveGoodMovesRef = useRef(0);
     const consecutiveBadMovesRef = useRef(0);
-    
+
+    // Position history for repetition detection
+    const positionHistoryRef = useRef([]);
+    const repetitionCountRef = useRef(0);
+
     // Beast mode - AI plays at maximum strength to win ASAP
     const [beastMode, setBeastMode] = useState(false);
 
@@ -151,11 +155,21 @@ export function useChessGame() {
         const moves = game.moves({ verbose: true });
         if (moves.length === 0) return null;
 
-        // Beast mode uses higher depth for stronger play, but not too deep to avoid lag
-        let depth = beastMode ? 4 : 3;
+        // Beast mode uses MAXIMUM depth for crushing difficulty
+        let depth = beastMode ? 6 : 3;
         const moveCount = game.history().length;
         if (!beastMode && playerSkillRef.current > 1800) depth = 4;
         if (!beastMode && moveCount < 10) depth = Math.min(depth, 3); // Faster opening moves only in normal mode
+
+        // Check for position repetition (detect if we're stuck in a loop)
+        const currentPosition = game.fen().split(' ')[0]; // Board position only
+        const recentPositions = positionHistoryRef.current.slice(-8); // Last 8 positions
+        const repetitions = recentPositions.filter(pos => pos === currentPosition).length;
+
+        if (repetitions >= 2 && !beastMode) {
+            // We're repeating - need to break the pattern and push for a win
+            repetitionCountRef.current = repetitions;
+        }
 
         // Helper to calculate win prob from score
         const scoreToWinProb = (score) => {
@@ -191,17 +205,32 @@ export function useChessGame() {
 
         // === NORMAL MODE: Target ~38% win probability, but try to win ===
         const targetWinProb = 38; // Keep player slightly behind
-        
+
+        // If we're stuck in repetition, play more aggressively to break the pattern
+        const isRepeating = repetitionCountRef.current >= 2;
+
         // Check if AI can win or get decisive advantage
         const winningMoves = scoredMoves.filter(m => m.winProb <= 20); // Moves that give AI big advantage
         const crushingMoves = scoredMoves.filter(m => m.winProb <= 10); // Near-winning moves
-        
+
         // If there's a crushing/winning move, take it!
         if (crushingMoves.length > 0) {
             selectedMove = crushingMoves[0];
-        } else if (winningMoves.length > 0 && currentWinProb <= 45) {
-            // Take winning moves if player isn't already ahead
+        } else if (winningMoves.length > 0 && (currentWinProb <= 45 || isRepeating)) {
+            // Take winning moves if player isn't already ahead OR if we're stuck in repetition
             selectedMove = winningMoves[0];
+            repetitionCountRef.current = 0; // Reset repetition counter
+        } else if (isRepeating) {
+            // Force aggressive play to break repetition - pick a move that changes the position
+            // Prefer moves that are different from recent moves and push for advantage
+            const aggressiveMoves = scoredMoves.filter(m => m.winProb <= 40);
+            if (aggressiveMoves.length > 0) {
+                selectedMove = aggressiveMoves[Math.floor(Math.random() * Math.min(2, aggressiveMoves.length))];
+                repetitionCountRef.current = 0;
+            } else {
+                selectedMove = scoredMoves[0]; // Play best move
+                repetitionCountRef.current = 0;
+            }
         } else {
             // Try to keep player around 38% win probability
             const targetMoves = scoredMoves.filter(m => m.winProb >= 30 && m.winProb <= 45);
@@ -329,10 +358,17 @@ export function useChessGame() {
                         const prevEval = currentEval;
                         const evalScore = result.score;
                         const change = prevEval - evalScore;
-                        
+
                         let quality = 'Good';
                         if (change > 100) quality = 'Excellent';
                         else if (change < -50) quality = 'Neutral';
+
+                        // Track position for repetition detection
+                        const currentPosition = chess.fen().split(' ')[0];
+                        positionHistoryRef.current.push(currentPosition);
+                        if (positionHistoryRef.current.length > 20) {
+                            positionHistoryRef.current.shift();
+                        }
 
                         // Batch state updates for smoother rendering
                         const newHistoryEntry = {
@@ -448,13 +484,15 @@ export function useChessGame() {
 
                 if (move) {
                     const prevEval = currentEval;
-                    
-                    // Quick evaluation without heavy findBestMove call
-                    const newEval = evaluateBoard(chess);
+
+                    // CRITICAL FIX: Use minimax to properly evaluate the position
+                    // This will detect hanging pieces, threats, and tactical issues
+                    // The evaluation is from white's perspective (player)
+                    const newEval = minimax(chess, 3, -Infinity, Infinity, false);
                     const prevWinProb = calculateWinProbability(prevEval);
                     const newWinProb = calculateWinProbability(newEval);
                     const winProbChange = newWinProb - prevWinProb;
-                    
+
                     // Categorize based on win percentage change
                     let quality;
                     if (winProbChange >= 20) quality = 'Excellent';
@@ -465,6 +503,13 @@ export function useChessGame() {
 
                     const alternatives = altMoves.filter(m => m !== move.san);
                     const gamePhase = getGamePhase(chess);
+
+                    // Track position for repetition detection
+                    const currentPosition = chess.fen().split(' ')[0];
+                    positionHistoryRef.current.push(currentPosition);
+                    if (positionHistoryRef.current.length > 20) {
+                        positionHistoryRef.current.shift();
+                    }
 
                     const newHistoryEntry = {
                         move: move.san,
@@ -518,7 +563,7 @@ export function useChessGame() {
                 setSelectedSquare(null);
             }
         }
-    }, [chess, selectedSquare, gameOver, isThinking, turn, currentEval, updateGameState, makeComputerMove, evaluateBoard, calculateWinProbability, getGamePhase, updatePlayerSkill]);
+    }, [chess, selectedSquare, gameOver, isThinking, turn, currentEval, updateGameState, makeComputerMove, minimax, calculateWinProbability, getGamePhase, updatePlayerSkill]);
 
     const resetGame = useCallback(() => {
         chess.reset();
@@ -535,6 +580,9 @@ export function useChessGame() {
         recentMovesRef.current = [];
         consecutiveGoodMovesRef.current = 0;
         consecutiveBadMovesRef.current = 0;
+        // Reset position tracking
+        positionHistoryRef.current = [];
+        repetitionCountRef.current = 0;
         updateGameState();
     }, [chess, updateGameState]);
 
