@@ -156,7 +156,7 @@ export function useChessGame() {
         if (moves.length === 0) return null;
 
         // Beast mode uses MAXIMUM depth for crushing difficulty
-        let depth = beastMode ? 6 : 3;
+        let depth = beastMode ? 4 : 3;
         const moveCount = game.history().length;
         if (!beastMode && playerSkillRef.current > 1800) depth = 4;
         if (!beastMode && moveCount < 10) depth = Math.min(depth, 3); // Faster opening moves only in normal mode
