@@ -12,6 +12,7 @@ const PIECE_VALUES = {
 };
 
 // Position bonuses for pieces (encourages good positions)
+// Tables are defined from White's perspective (Rank 8 at top, Rank 1 at bottom)
 const PAWN_TABLE = [
     0, 0, 0, 0, 0, 0, 0, 0,
     50, 50, 50, 50, 50, 50, 50, 50,
@@ -32,6 +33,50 @@ const KNIGHT_TABLE = [
     -30, 5, 10, 15, 15, 10, 5, -30,
     -40, -20, 0, 5, 5, 0, -20, -40,
     -50, -40, -30, -30, -30, -30, -40, -50
+];
+
+const BISHOP_TABLE = [
+    -20, -10, -10, -10, -10, -10, -10, -20,
+    -10, 0, 0, 0, 0, 0, 0, -10,
+    -10, 0, 5, 10, 10, 5, 0, -10,
+    -10, 5, 5, 10, 10, 5, 5, -10,
+    -10, 0, 10, 10, 10, 10, 0, -10,
+    -10, 10, 10, 10, 10, 10, 10, -10,
+    -10, 5, 0, 0, 0, 0, 5, -10,
+    -20, -10, -10, -10, -10, -10, -10, -20
+];
+
+const ROOK_TABLE = [
+    0, 0, 0, 5, 5, 0, 0, 0,
+    5, 10, 10, 10, 10, 10, 10, 5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    -5, 0, 0, 0, 0, 0, 0, -5,
+    5, 10, 10, 10, 10, 10, 10, 5,
+    0, 0, 0, 0, 0, 0, 0, 0
+];
+
+const QUEEN_TABLE = [
+    -20, -10, -10, -5, -5, -10, -10, -20,
+    -10, 0, 0, 0, 0, 0, 0, -10,
+    -10, 0, 5, 5, 5, 5, 0, -10,
+    -5, 0, 5, 5, 5, 5, 0, -5,
+    0, 0, 5, 5, 5, 5, 0, -5,
+    -10, 5, 5, 5, 5, 5, 0, -10,
+    -10, 0, 5, 0, 0, 0, 0, -10,
+    -20, -10, -10, -5, -5, -10, -10, -20
+];
+
+const KING_TABLE_MID = [
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -20, -30, -30, -40, -40, -30, -30, -20,
+    -10, -20, -20, -20, -20, -20, -20, -10,
+    20, 20, 0, 0, 0, 0, 20, 20,
+    20, 30, 10, 0, 0, 10, 30, 20
 ];
 
 export function useChessGame() {
@@ -86,18 +131,26 @@ export function useChessGame() {
         let score = 0;
         const board = game.board();
 
+        const TABLES = {
+            p: PAWN_TABLE,
+            n: KNIGHT_TABLE,
+            b: BISHOP_TABLE,
+            r: ROOK_TABLE,
+            q: QUEEN_TABLE,
+            k: KING_TABLE_MID
+        };
+
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = board[row][col];
                 if (piece) {
                     let value = PIECE_VALUES[piece.type] || 0;
 
-                    // Add position bonus
-                    const idx = row * 8 + col;
-                    if (piece.type === 'p') {
-                        value += piece.color === 'w' ? PAWN_TABLE[63 - idx] : PAWN_TABLE[idx];
-                    } else if (piece.type === 'n') {
-                        value += piece.color === 'w' ? KNIGHT_TABLE[63 - idx] : KNIGHT_TABLE[idx];
+                    const table = TABLES[piece.type];
+                    if (table) {
+                        // Standardize table access: Black perspective is upside down
+                        const tableIdx = piece.color === 'w' ? (row * 8 + col) : ((7 - row) * 8 + col);
+                        value += table[tableIdx];
                     }
 
                     score += piece.color === 'w' ? value : -value;
@@ -105,17 +158,19 @@ export function useChessGame() {
             }
         }
 
-        // Reduced mobility impact to avoid redundant game.moves() calls
         return score;
     }, []);
 
-    // Minimax with alpha-beta pruning
-    // Minimax with alpha-beta pruning and move ordering
+    // Minimax with alpha-beta pruning and Transposition Table stability
     const minimax = useCallback((game, depth, alpha, beta, isMaximizing) => {
         const fen = game.fen();
         const ttHit = transpositionTableRef.current[fen];
+
+        // Transposition Table Lookup with bound verification
         if (ttHit && ttHit.depth >= depth) {
-            return ttHit.data;
+            if (ttHit.flag === 'EXACT') return ttHit.data;
+            if (ttHit.flag === 'ALPHA' && ttHit.data.score <= alpha) return ttHit.data;
+            if (ttHit.flag === 'BETA' && ttHit.data.score >= beta) return ttHit.data;
         }
 
         if (depth === 0 || game.isGameOver()) {
@@ -134,6 +189,8 @@ export function useChessGame() {
 
         let result;
         let bestPV = [];
+        let originalAlpha = alpha;
+
         if (isMaximizing) {
             let maxEval = -Infinity;
             for (const move of moves) {
@@ -166,13 +223,18 @@ export function useChessGame() {
             result = { score: minEval, pv: bestPV };
         }
 
-        // Cache result in transposition table
-        transpositionTableRef.current[fen] = { depth, data: result };
+        // Determine TT flag
+        let flag = 'EXACT';
+        if (result.score <= originalAlpha) flag = 'ALPHA';
+        else if (result.score >= beta) flag = 'BETA';
 
-        // Basic cache management
-        if (Object.keys(transpositionTableRef.current).length > 1000) {
-            // Keep roughly recent entries or just clear if too large
-            if (Math.random() > 0.95) transpositionTableRef.current = {};
+        // Cache result in transposition table
+        transpositionTableRef.current[fen] = { depth, data: result, flag };
+
+        // Basic cache management - aging and size limit
+        if (Object.keys(transpositionTableRef.current).length > 2000) {
+            // Periodically clear the table to prevent memory leaks and stale evaluations
+            if (Math.random() > 0.9) transpositionTableRef.current = {};
         }
 
         return result;
