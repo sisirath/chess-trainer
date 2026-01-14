@@ -57,7 +57,10 @@ function App() {
                 {winner === 'Draw' ? "It's a draw!" : `${winner} wins!`}
               </p>
               <div className="modal-actions">
-                <button className="btn-secondary" onClick={() => setShowGameOverModal(false)}>
+                <button className="btn-secondary" onClick={() => {
+                  setShowGameOverModal(false);
+                  game.goToMove(game.moveHistory.length - 1);
+                }}>
                   Review Game
                 </button>
                 <button className="btn-primary" onClick={resetGame}>

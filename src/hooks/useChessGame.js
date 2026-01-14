@@ -128,6 +128,16 @@ export function useChessGame() {
 
     // Evaluate board position
     const evaluateBoard = useCallback((game) => {
+        if (game.isCheckmate()) {
+            // If it's checkmate, the side that JUST moved won.
+            // game.turn() returns the side whose turn it is NOW (the loser).
+            return game.turn() === 'w' ? -1000000 : 1000000;
+        }
+
+        if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition()) {
+            return 0;
+        }
+
         let score = 0;
         const board = game.board();
 
@@ -288,6 +298,12 @@ export function useChessGame() {
         scoredMoves.sort((a, b) => a.score - b.score);
 
         let selectedMove;
+
+        // === CRITICAL: Check for immediate mate or crushing advantage ===
+        const immediateMate = scoredMoves.find(m => m.score <= -900000);
+        if (immediateMate) {
+            return { move: immediateMate.move, score: immediateMate.score };
+        }
 
         // === BEAST MODE: Play the absolute best move always ===
         if (beastMode) {
