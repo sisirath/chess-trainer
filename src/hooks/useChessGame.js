@@ -573,7 +573,8 @@ export function useChessGame() {
                     // CRITICAL FIX: Use minimax to properly evaluate the position
                     // This will detect hanging pieces, threats, and tactical issues
                     // The evaluation is from white's perspective (player)
-                    const newEval = minimax(chess, 3, -Infinity, Infinity, false);
+                    const result = minimax(chess, 3, -Infinity, Infinity, false);
+                    const newEval = result.score;
                     const prevWinProb = calculateWinProbability(prevEval);
                     const newWinProb = calculateWinProbability(newEval);
                     const winProbChange = newWinProb - prevWinProb;
@@ -786,7 +787,8 @@ export function useChessGame() {
             const move = chess.move(san);
             if (move) {
                 const prevEval = currentEval;
-                const newEval = minimax(chess, 3, -Infinity, Infinity, false);
+                const result = minimax(chess, 3, -Infinity, Infinity, false);
+                const newEval = result.score;
                 const prevWinProb = calculateWinProbability(prevEval);
                 const newWinProb = calculateWinProbability(newEval);
                 const winProbChange = newWinProb - prevWinProb;
