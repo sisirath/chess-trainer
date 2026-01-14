@@ -151,7 +151,7 @@ export default function HintWidget({
                                                     <strong>Why this move?</strong>
                                                 </p>
                                                 <p style={{ opacity: 0.9 }}>
-                                                    {generateEducationalExplanation(fen, hint.move)}
+                                                    {generateEducationalExplanation(fen, hint.move, hint.pv)}
                                                 </p>
                                             </div>
                                         )}

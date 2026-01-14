@@ -110,7 +110,7 @@ export function useChessGame() {
     // Minimax with alpha-beta pruning and move ordering
     const minimax = useCallback((game, depth, alpha, beta, isMaximizing) => {
         if (depth === 0 || game.isGameOver()) {
-            return evaluateBoard(game);
+            return { score: evaluateBoard(game), pv: [] };
         }
 
         const moves = game.moves();
@@ -123,28 +123,37 @@ export function useChessGame() {
             return 0;
         });
 
+        let bestPV = [];
         if (isMaximizing) {
             let maxEval = -Infinity;
             for (const move of moves) {
                 game.move(move);
-                const evalScore = minimax(game, depth - 1, alpha, beta, false);
+                const result = minimax(game, depth - 1, alpha, beta, false);
                 game.undo();
-                maxEval = Math.max(maxEval, evalScore);
-                alpha = Math.max(alpha, evalScore);
+
+                if (result.score > maxEval) {
+                    maxEval = result.score;
+                    bestPV = [move, ...result.pv];
+                }
+                alpha = Math.max(alpha, result.score);
                 if (beta <= alpha) break;
             }
-            return maxEval;
+            return { score: maxEval, pv: bestPV };
         } else {
             let minEval = Infinity;
             for (const move of moves) {
                 game.move(move);
-                const evalScore = minimax(game, depth - 1, alpha, beta, true);
+                const result = minimax(game, depth - 1, alpha, beta, true);
                 game.undo();
-                minEval = Math.min(minEval, evalScore);
-                beta = Math.min(beta, evalScore);
+
+                if (result.score < minEval) {
+                    minEval = result.score;
+                    bestPV = [move, ...result.pv];
+                }
+                beta = Math.min(beta, result.score);
                 if (beta <= alpha) break;
             }
-            return minEval;
+            return { score: minEval, pv: bestPV };
         }
     }, [evaluateBoard]);
 
@@ -185,11 +194,11 @@ export function useChessGame() {
         const scoredMoves = [];
         for (const move of moves) {
             game.move(move);
-            const score = minimax(game, depth - 1, -Infinity, Infinity, true);
+            const result = minimax(game, depth - 1, -Infinity, Infinity, true);
             game.undo();
 
-            const resultingWinProb = scoreToWinProb(score);
-            scoredMoves.push({ move, score, winProb: resultingWinProb });
+            const resultingWinProb = scoreToWinProb(result.score);
+            scoredMoves.push({ move, score: result.score, winProb: resultingWinProb });
         }
 
         // Sort moves by score (best for black = lowest score)
@@ -287,41 +296,50 @@ export function useChessGame() {
         const moves = chess.moves({ verbose: true });
         if (moves.length === 0) return [];
 
-        const scoredMoves = [];
-        // Use depth 2 for quick analysis (responsiveness)
-        const depth = 2;
-
+        // 1. Initial quick scan (Depth 2) to filter top candidates
+        const initialResults = [];
         for (const move of moves) {
             chess.move(move);
-            // After I move, it's opponent's turn. 
-            // If I'm White, I want Max. Opponent (Black) will Minimize. 
-            // So I call minimax with isMaximizing=false (Black's turn).
-            // Logic: minimax(game, depth, alpha, beta, isMaximizing)
-            const isMaximizing = chess.turn() === 'w';
-            const score = minimax(chess, depth - 1, -Infinity, Infinity, isMaximizing);
+            const isMaximizing = chess.turn() === 'w'; // Is next turn white?
+            const result = minimax(chess, 1, -Infinity, Infinity, isMaximizing);
             chess.undo();
 
-            scoredMoves.push({
+            initialResults.push({
                 move: move.san,
                 from: move.from,
                 to: move.to,
                 piece: move.piece,
                 captured: move.captured,
-                score,
-                winProb: 0 // Placeholder, calculated below
+                score: result.score
             });
         }
 
-        // Sort: White wants High score, Black wants Low score.
+        // Sort: White wants High, Black wants Low
         const isWhite = chess.turn() === 'w';
-        scoredMoves.sort((a, b) => isWhite ? b.score - a.score : a.score - b.score);
+        initialResults.sort((a, b) => isWhite ? b.score - a.score : a.score - b.score);
+        const topCandidates = initialResults.slice(0, 3);
 
-        // Convert scores to Win Probability
-        // Note: calculateWinProbability expects "evalScore".
-        return scoredMoves.slice(0, 3).map(m => ({
-            ...m,
-            winProb: Math.round(calculateWinProbability(m.score))
-        }));
+        // 2. Refined deep analysis for top candidates (Depth 5)
+        const finalResults = [];
+        const deepDepth = 5;
+
+        for (const candidate of topCandidates) {
+            const moveVerbose = moves.find(m => m.san === candidate.move);
+            chess.move(moveVerbose);
+            // After this move, it's opponent's turn. 
+            const nextTurnIsMaximizing = chess.turn() === 'w';
+            const result = minimax(chess, deepDepth - 1, -Infinity, Infinity, nextTurnIsMaximizing);
+            chess.undo();
+
+            finalResults.push({
+                ...candidate,
+                score: result.score,
+                pv: result.pv,
+                winProb: Math.round(calculateWinProbability(result.score))
+            });
+        }
+
+        return finalResults;
     }, [chess, minimax, calculateWinProbability]);
 
 
@@ -348,7 +366,8 @@ export function useChessGame() {
 
     // Enhanced move analysis - uses win percentage change for categorization
     const analyzeMoveQuality = useCallback((game, move, prevEval, bestMoveResult) => {
-        const currentEval = minimax(game, 2, -Infinity, Infinity, false);
+        const result = minimax(game, 2, -Infinity, Infinity, false);
+        const currentEval = result.score;
         const evalChange = currentEval - prevEval;
 
         const gamePhase = getGamePhase(game);

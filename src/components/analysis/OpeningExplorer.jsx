@@ -16,6 +16,13 @@ export default function OpeningExplorer({
     const identifiedOpening = useMemo(() => identifyOpening(moveHistory), [moveHistory]);
     const bookMoves = useMemo(() => getBookMoves(moveHistory), [moveHistory]);
 
+    // Auto-collapse when book moves run out
+    React.useEffect(() => {
+        if (moveHistory.length > 0 && bookMoves.length === 0 && !collapsed) {
+            onToggle();
+        }
+    }, [bookMoves.length, moveHistory.length, collapsed, onToggle]);
+
     return (
         <div
             className={`analysis-widget opening-explorer ${collapsed ? 'collapsed' : ''}`}
