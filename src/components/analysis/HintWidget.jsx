@@ -18,7 +18,14 @@ export default function HintWidget({
     const [expandedHint, setExpandedHint] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
 
-    // ...
+    // Auto-expand/collapse of the widget container when the engine is toggled
+    useEffect(() => {
+        if (isEnabled && collapsed) {
+            onToggle();
+        } else if (!isEnabled && !collapsed) {
+            onToggle();
+        }
+    }, [isEnabled, collapsed, onToggle]);
 
     // Re-analyze when position changes if enabled
     useEffect(() => {

@@ -28,15 +28,8 @@ export default function MoveHistoryWidget({
     // Otherwise use local state.
     const activeIndex = currentMoveIndex !== undefined ? currentMoveIndex : localSelectedMove;
 
-    // Scroll active move into view
-    useEffect(() => {
-        if (activeIndex !== null && activeIndex >= 0) {
-            const element = document.getElementById(`move-${activeIndex}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
-    }, [activeIndex]);
+    // Scroll active move into view is disabled globally per user request
+    // to prevent intrusive jumping of the analysis panel.
 
     const handleMoveClick = (index) => {
         if (onMoveClick) {

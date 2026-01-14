@@ -62,6 +62,9 @@ export function useChessGame() {
     // Beast mode - AI plays at maximum strength to win ASAP
     const [beastMode, setBeastMode] = useState(false);
 
+    // Transposition table for minimax optimization
+    const transpositionTableRef = useRef({});
+
     const updateGameState = useCallback(() => {
         setFen(chess.fen());
         setBoard(chess.board());
@@ -109,6 +112,12 @@ export function useChessGame() {
     // Minimax with alpha-beta pruning
     // Minimax with alpha-beta pruning and move ordering
     const minimax = useCallback((game, depth, alpha, beta, isMaximizing) => {
+        const fen = game.fen();
+        const ttHit = transpositionTableRef.current[fen];
+        if (ttHit && ttHit.depth >= depth) {
+            return ttHit.data;
+        }
+
         if (depth === 0 || game.isGameOver()) {
             return { score: evaluateBoard(game), pv: [] };
         }
@@ -123,38 +132,50 @@ export function useChessGame() {
             return 0;
         });
 
+        let result;
         let bestPV = [];
         if (isMaximizing) {
             let maxEval = -Infinity;
             for (const move of moves) {
                 game.move(move);
-                const result = minimax(game, depth - 1, alpha, beta, false);
+                const evalResult = minimax(game, depth - 1, alpha, beta, false);
                 game.undo();
 
-                if (result.score > maxEval) {
-                    maxEval = result.score;
-                    bestPV = [move, ...result.pv];
+                if (evalResult.score > maxEval) {
+                    maxEval = evalResult.score;
+                    bestPV = [move, ...evalResult.pv];
                 }
-                alpha = Math.max(alpha, result.score);
+                alpha = Math.max(alpha, evalResult.score);
                 if (beta <= alpha) break;
             }
-            return { score: maxEval, pv: bestPV };
+            result = { score: maxEval, pv: bestPV };
         } else {
             let minEval = Infinity;
             for (const move of moves) {
                 game.move(move);
-                const result = minimax(game, depth - 1, alpha, beta, true);
+                const evalResult = minimax(game, depth - 1, alpha, beta, true);
                 game.undo();
 
-                if (result.score < minEval) {
-                    minEval = result.score;
-                    bestPV = [move, ...result.pv];
+                if (evalResult.score < minEval) {
+                    minEval = evalResult.score;
+                    bestPV = [move, ...evalResult.pv];
                 }
-                beta = Math.min(beta, result.score);
+                beta = Math.min(beta, evalResult.score);
                 if (beta <= alpha) break;
             }
-            return { score: minEval, pv: bestPV };
+            result = { score: minEval, pv: bestPV };
         }
+
+        // Cache result in transposition table
+        transpositionTableRef.current[fen] = { depth, data: result };
+
+        // Basic cache management
+        if (Object.keys(transpositionTableRef.current).length > 1000) {
+            // Keep roughly recent entries or just clear if too large
+            if (Math.random() > 0.95) transpositionTableRef.current = {};
+        }
+
+        return result;
     }, [evaluateBoard]);
 
     // Find best move for computer with adaptive difficulty

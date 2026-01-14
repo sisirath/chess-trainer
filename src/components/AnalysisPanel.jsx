@@ -95,12 +95,12 @@ export default function AnalysisPanel({
 
     const isResizing = useRef(null);
 
-    const toggleSection = (section) => {
+    const toggleSection = useCallback((section) => {
         setCollapsed(prev => ({
             ...prev,
             [section]: !prev[section]
         }));
-    };
+    }, []);
 
     // Drag Handlers
     const handleDragStart = (e, position) => {
