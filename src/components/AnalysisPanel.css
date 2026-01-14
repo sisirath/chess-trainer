@@ -98,6 +98,46 @@
     gap: 0.75rem;
 }
 
+.review-badge {
+    padding: 0.2rem 0.5rem;
+    background: var(--color-accent);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 800;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(0, 206, 201, 0.3);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.exit-review-btn {
+    background: var(--color-accent) !important;
+    font-weight: 700 !important;
+    animation: slideInTop 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInTop {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 .icon-btn-mini {
     padding: 0.5rem;
     border-radius: 0.6rem;

@@ -265,7 +265,21 @@ export default function AnalysisPanel({
                 <div className="logo-section">
                     <Trophy size={20} className="logo-icon" />
                     <h1>Chess Trainer</h1>
+                    {viewMoveIndex !== null && (
+                        <div className="review-badge">
+                            REVIEW MODE
+                        </div>
+                    )}
                 </div>
+
+                {viewMoveIndex !== null && (
+                    <button
+                        className="btn-primary btn-mini exit-review-btn"
+                        onClick={() => goToMove(null)}
+                    >
+                        Return to Live
+                    </button>
+                )}
 
                 <button
                     className="btn-secondary icon-btn-mini"
