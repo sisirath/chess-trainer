@@ -10,8 +10,18 @@ function App() {
   const game = useChessGame();
   const [theme, setTheme] = useState('classic');
   const [pieceSet, setPieceSet] = useState('neo');
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
 
   const { gameOver, winner, resetGame } = game;
+
+  // Sync modal state with game over state
+  React.useEffect(() => {
+    if (gameOver) {
+      setShowGameOverModal(true);
+    } else {
+      setShowGameOverModal(false);
+    }
+  }, [gameOver]);
 
   return (
     <div className="app">
@@ -25,10 +35,10 @@ function App() {
           setPieceSet={setPieceSet}
         />
       </div>
-      
+
       {/* Game Over Modal */}
       <AnimatePresence>
-        {gameOver && (
+        {showGameOverModal && (
           <motion.div
             className="modal-overlay"
             initial={{ opacity: 0 }}
@@ -46,9 +56,14 @@ function App() {
               <p className="winner-text">
                 {winner === 'Draw' ? "It's a draw!" : `${winner} wins!`}
               </p>
-              <button className="btn-primary" onClick={resetGame}>
-                Play Again
-              </button>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={() => setShowGameOverModal(false)}>
+                  Review Game
+                </button>
+                <button className="btn-primary" onClick={resetGame}>
+                  Play Again
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

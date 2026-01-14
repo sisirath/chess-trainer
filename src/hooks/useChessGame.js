@@ -280,6 +280,51 @@ export function useChessGame() {
         return Math.max(5, Math.min(95, prob));
     }, []);
 
+    // Analyze all moves to find top candidates for Hints
+    const analyzeBestMoves = useCallback(() => {
+        if (chess.isGameOver()) return [];
+
+        const moves = chess.moves({ verbose: true });
+        if (moves.length === 0) return [];
+
+        const scoredMoves = [];
+        // Use depth 2 for quick analysis (responsiveness)
+        const depth = 2;
+
+        for (const move of moves) {
+            chess.move(move);
+            // After I move, it's opponent's turn. 
+            // If I'm White, I want Max. Opponent (Black) will Minimize. 
+            // So I call minimax with isMaximizing=false (Black's turn).
+            // Logic: minimax(game, depth, alpha, beta, isMaximizing)
+            const isMaximizing = chess.turn() === 'w';
+            const score = minimax(chess, depth - 1, -Infinity, Infinity, isMaximizing);
+            chess.undo();
+
+            scoredMoves.push({
+                move: move.san,
+                from: move.from,
+                to: move.to,
+                piece: move.piece,
+                captured: move.captured,
+                score,
+                winProb: 0 // Placeholder, calculated below
+            });
+        }
+
+        // Sort: White wants High score, Black wants Low score.
+        const isWhite = chess.turn() === 'w';
+        scoredMoves.sort((a, b) => isWhite ? b.score - a.score : a.score - b.score);
+
+        // Convert scores to Win Probability
+        // Note: calculateWinProbability expects "evalScore".
+        return scoredMoves.slice(0, 3).map(m => ({
+            ...m,
+            winProb: Math.round(calculateWinProbability(m.score))
+        }));
+    }, [chess, minimax, calculateWinProbability]);
+
+
     // Determine game phase based on material and move count
     const getGamePhase = useCallback((game) => {
         const moveCount = game.history().length;
@@ -612,24 +657,192 @@ export function useChessGame() {
         updateGameState();
     }, [updateGameState]);
 
+    // Game Review / History Navigation
+    const [viewMoveIndex, setViewMoveIndex] = useState(null); // null = Live Game
+
+    // Computed state based on viewMoveIndex
+    const viewState = useCallback(() => {
+        if (viewMoveIndex === null) {
+            return {
+                fen: fen,
+                board: board,
+                turn: turn,
+                check: check,
+                lastMove: lastMove,
+                isLive: true
+            };
+        }
+
+        // Calculate historical state
+        let targetFen;
+        let targetLastMove = null;
+
+        if (viewMoveIndex === -1) {
+            targetFen = new Chess().fen(); // Start position
+        } else if (viewMoveIndex >= 0 && viewMoveIndex < moveHistory.length) {
+            const entry = moveHistory[viewMoveIndex];
+            targetFen = entry.fen;
+            targetLastMove = { from: entry.from, to: entry.to };
+        } else {
+            // Fallback (shouldn't happen)
+            return { fen, board, turn, check, lastMove, isLive: true };
+        }
+
+        // Use a temp chess instance to derive board state
+        // Note: This is lightweight enough for UI interactions
+        const tempGame = new Chess(targetFen);
+
+        return {
+            fen: targetFen,
+            board: tempGame.board(),
+            turn: tempGame.turn(),
+            check: tempGame.inCheck(),
+            lastMove: targetLastMove,
+            isLive: false
+        };
+    }, [viewMoveIndex, moveHistory, fen, board, turn, check, lastMove]);
+
+    const currentState = viewState();
+
+    const goToMove = useCallback((index) => {
+        if (index >= -1 && index < moveHistory.length) {
+            setViewMoveIndex(index);
+        } else if (index === null || index >= moveHistory.length) {
+            setViewMoveIndex(null); // Go to live
+        }
+    }, [moveHistory.length]);
+
+    const nextMove = useCallback(() => {
+        setViewMoveIndex(current => {
+            if (current === null) return null; // Already live
+            if (current >= moveHistory.length - 1) return null; // Switch to live
+            return current + 1;
+        });
+    }, [moveHistory.length]);
+
+    const prevMove = useCallback(() => {
+        setViewMoveIndex(current => {
+            if (current === null) {
+                // From live to last move
+                return moveHistory.length > 0 ? moveHistory.length - 1 : -1;
+            }
+            if (current <= -1) return -1; // Stay at start
+            return current - 1;
+        });
+    }, [moveHistory.length]);
+
+    // Auto-exit review mode if a new move is made (though onSquareClick checks isLive)
+    useEffect(() => {
+        if (isThinking) {
+            setViewMoveIndex(null);
+        }
+    }, [isThinking]);
+
+    // Make a move programmatically (e.g. from Opening Explorer)
+    const makeMove = useCallback((san) => {
+        if (gameOver || isThinking || turn !== 'w') return false;
+
+        try {
+            const move = chess.move(san);
+            if (move) {
+                const prevEval = currentEval;
+                const newEval = minimax(chess, 3, -Infinity, Infinity, false);
+                const prevWinProb = calculateWinProbability(prevEval);
+                const newWinProb = calculateWinProbability(newEval);
+                const winProbChange = newWinProb - prevWinProb;
+
+                let quality;
+                if (winProbChange >= 20) quality = 'Excellent';
+                else if (winProbChange >= 10) quality = 'Good';
+                else if (winProbChange > -10) quality = 'Neutral';
+                else if (winProbChange > -20) quality = 'Bad';
+                else quality = 'Terrible';
+
+                const gamePhase = getGamePhase(chess);
+
+                // Track position
+                const currentPosition = chess.fen().split(' ')[0];
+                positionHistoryRef.current.push(currentPosition);
+                if (positionHistoryRef.current.length > 20) {
+                    positionHistoryRef.current.shift();
+                }
+
+                const newHistoryEntry = {
+                    move: move.san,
+                    from: move.from,
+                    to: move.to,
+                    piece: move.piece,
+                    captured: move.captured,
+                    promotion: move.promotion,
+                    player: 'human',
+                    alternatives: [],
+                    bestMissed: null,
+                    bestMoveScore: newEval,
+                    fen: chess.fen(),
+                    quality,
+                    evalChange: newEval - prevEval,
+                    evalScore: newEval,
+                    gamePhase,
+                    winProbChange
+                };
+
+                updatePlayerSkill(quality);
+
+                setMoveHistory(prev => [...prev, newHistoryEntry]);
+                setCurrentEval(newEval);
+                setWinProbability(newWinProb);
+                setLastMove({ from: move.from, to: move.to });
+                setSelectedSquare(null);
+                updateGameState();
+
+                if (!chess.isGameOver()) {
+                    setTimeout(() => makeComputerMove(), 50);
+                }
+                return true;
+            }
+        } catch (e) {
+            console.error("Invalid move:", san, e);
+        }
+        return false;
+    }, [chess, gameOver, isThinking, turn, currentEval, minimax, calculateWinProbability, getGamePhase, updatePlayerSkill, updateGameState, makeComputerMove]);
+
     return {
-        fen,
-        board,
-        turn,
-        check,
+        // Return view state values instead of raw state
+        fen: currentState.fen,
+        board: currentState.board,
+        turn: currentState.turn,
+        check: currentState.check,
+        lastMove: currentState.lastMove,
+        isLive: currentState.isLive,
+
+        // Original functionality
         gameOver,
         winner,
-        selectedSquare,
-        onSquareClick,
+        selectedSquare: currentState.isLive ? selectedSquare : null, // Disable selection in review
+        onSquareClick: currentState.isLive ? onSquareClick : () => { }, // Disable clicks in review
         resetGame,
         undoMove,
+        makeMove, // Exposed function
         moveHistory,
         winProbability,
         isThinking,
         currentEval,
-        lastMove,
+
+        // Stats
         moveStats,
+
+        // Beast Mode
         beastMode,
-        setBeastMode
+        setBeastMode,
+
+        // Navigation
+        viewMoveIndex: viewMoveIndex === null ? moveHistory.length - 1 : viewMoveIndex, // Normalize for UI
+        isReviewing: viewMoveIndex !== null,
+        goToMove,
+        nextMove,
+        prevMove,
+
+        // Analysis
+        analyzeBestMoves
     };
 }

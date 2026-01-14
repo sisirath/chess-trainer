@@ -6,8 +6,26 @@
     gap: 0.75rem;
     padding: 0;
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    /* Allow scrolling for the entire panel */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
+
+/* Custom Scrollbar for the panel */
+.analysis-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.analysis-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+/* ... existing media queries ... */
+
+/* [Skipping to .nav-btn update] */
+
 
 /* Mobile Responsive */
 @media (max-width: 1000px) {
@@ -253,12 +271,44 @@
 }
 
 /* Stats Widget */
+.stats-widget .widget-content {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+/* Hint Widget Styles */
+.hint-item {
+    transition: background-color 0.2s;
+}
+
+.hint-item:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.hint-item.expanded {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.move-badge {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.panel-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
 .quality-bar-mini {
     display: flex;
-    height: 10px;
-    border-radius: 5px;
+    height: 6px;
+    border-radius: 3px;
     overflow: hidden;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    /* Placeholder track */
 }
 
 .q-seg {
@@ -288,16 +338,16 @@
 .stats-legend-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
 .stat-pill {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.35rem 0.6rem;
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     font-size: 0.75rem;
 }
 
@@ -651,86 +701,87 @@
         flex-wrap: wrap;
         gap: 0.5rem;
     }
-    
+
     .widget-header h3 {
         font-size: 0.7rem;
     }
-    
+
     .header-actions {
         gap: 0.75rem;
     }
-    
+
     .toggle-label {
         font-size: 0.6rem;
     }
-    
+
     .widget-content {
         padding: 0.75rem 1rem;
     }
-    
+
     .training-header-widget {
         padding: 0.5rem 1rem;
         flex-wrap: wrap;
         gap: 0.5rem;
     }
-    
+
     .logo-section h1 {
         font-size: 0.9rem;
     }
-    
+
     .controls-section {
         gap: 0.5rem;
     }
-    
+
     .btn-mini {
         padding: 0.3rem 0.6rem;
         font-size: 0.7rem;
     }
-    
+
     .icon-btn-mini {
         padding: 0.4rem;
     }
-    
+
     /* Compact move history on mobile */
     .interactive-move-card {
         padding: 0.5rem;
     }
-    
+
     .card-top {
         gap: 0.5rem;
     }
-    
-    .m-num, .m-val {
+
+    .m-num,
+    .m-val {
         font-size: 0.8rem;
     }
-    
+
     .q-badge {
         font-size: 0.6rem;
         padding: 0.2rem 0.4rem;
     }
-    
+
     /* Smaller stats on mobile */
     .stat-pill {
         padding: 0.3rem 0.5rem;
     }
-    
+
     .stat-pill .label {
         font-size: 0.6rem;
     }
-    
+
     .stat-pill .val {
         font-size: 0.7rem;
     }
-    
+
     /* Compact probability display */
     .prob-large {
         font-size: 1.5rem;
     }
-    
+
     .killed-piece {
         font-size: 1rem;
     }
-    
+
     .killed-piece.large {
         font-size: 1.2rem;
     }
@@ -741,32 +792,34 @@
         max-width: 98vw;
         gap: 0.4rem;
     }
-    
+
     .widget-header {
         padding: 0.4rem 0.8rem;
     }
-    
+
     .widget-content {
         padding: 0.6rem 0.8rem;
     }
-    
+
     .training-header-widget {
         padding: 0.4rem 0.8rem;
     }
-    
+
     .logo-section h1 {
         font-size: 0.8rem;
     }
-    
+
     .btn-mini {
         padding: 0.25rem 0.5rem;
         font-size: 0.65rem;
     }
-    
+
     .toggle-label {
-        display: none; /* Hide toggle labels on very small screens */
+        display: none;
+        /* Hide toggle labels on very small screens */
     }
 }
+
 /* Collapsible Widget Styles */
 .widget-header.clickable {
     cursor: pointer;
@@ -811,4 +864,214 @@
 
 .widget-content {
     transition: opacity 0.2s ease;
+}
+
+/* Navigation Controls in History Widget */
+.history-controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Cleaned up styles */
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+}
+
+.interactive-move-card.active-move {
+    background: rgba(108, 92, 231, 0.15);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 10px rgba(108, 92, 231, 0.1);
+}
+
+.active-indicator {
+    width: 6px;
+    height: 6px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 5px var(--color-accent);
+}
+
+/* Opening Explorer Styles */
+.opening-explorer {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.opening-status {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.opening-name {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0.25rem 0 0.5rem 0;
+    color: #fff;
+    background: linear-gradient(90deg, #fff, var(--color-text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.opening-desc {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    margin: 0;
+    font-style: italic;
+}
+
+.start-prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+}
+
+.unknown-opening {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+.book-moves-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.book-moves-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.book-move-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.book-move-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(2px);
+    border-left: 2px solid var(--color-accent);
+}
+
+.move-badge {
+    font-weight: 800;
+    color: var(--color-accent);
+    min-width: 2.5rem;
+}
+
+.move-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.leads-to {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.icon-accent {
+    color: var(--color-accent);
+}
+
+/* Sleek Nav Buttons */
+.nav-btn {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px;
+    color: var(--color-text-secondary);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    height: 40px !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: initial !important;
+    line-height: initial !important;
+    padding: 0 !important;
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Drag Handles */
+.drag-handle {
+    cursor: grab;
+    margin-right: 0.5rem;
+    color: var(--color-text-secondary);
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+.drag-handle:hover {
+    opacity: 1;
+    color: var(--color-accent);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Ensure panel scrolls */
+.analysis-panel {
+    padding-bottom: 2rem;
+    overscroll-behavior: contain;
+}
+
+/* Explorer Move Notes */
+.move-note {
+    font-size: 0.65rem;
+    margin-top: 2px;
+}
+
+.move-note.pros {
+    color: #4ade80;
+    /* Green */
+}
+
+.move-note.cons {
+    color: #fb923c;
+    /* Orange */
 }
