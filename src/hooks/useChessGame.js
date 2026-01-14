@@ -93,6 +93,7 @@ export function useChessGame() {
     const [isThinking, setIsThinking] = useState(false);
     const [currentEval, setCurrentEval] = useState(0);
     const [lastMove, setLastMove] = useState(null);
+    const [validMoves, setValidMoves] = useState([]);
 
     // Player skill tracking with smoothing
     const playerSkillRef = useRef(1200);
@@ -692,13 +693,28 @@ export function useChessGame() {
                     to: square,
                     promotion: 'q',
                 });
+                if (!move) {
+                    // Try to handle special moves like castling by clicking the rook
+                    const possibleMoves = chess.moves({ square: selectedSquare, verbose: true });
+                    const isKingSelected = chess.get(selectedSquare)?.type === 'k';
+                    const clickedPiece = chess.get(square);
+
+                    if (isKingSelected && clickedPiece?.type === 'r' && clickedPiece.color === 'w') {
+                        // User clicked our own rook while king was selected - check for castling move
+                        const castlingMove = possibleMoves.find(m =>
+                            (m.flags.includes('k') && (square.startsWith('h'))) ||
+                            (m.flags.includes('q') && (square.startsWith('a')))
+                        );
+                        if (castlingMove) {
+                            move = chess.move(castlingMove.san);
+                        }
+                    }
+                }
 
                 if (move) {
                     const prevEval = currentEval;
 
                     // CRITICAL FIX: Use minimax to properly evaluate the position
-                    // This will detect hanging pieces, threats, and tactical issues
-                    // The evaluation is from white's perspective (player)
                     const result = minimax(chess, 3, -Infinity, Infinity, false);
                     const newEval = result.score;
                     const prevWinProb = calculateWinProbability(prevEval);
@@ -746,6 +762,7 @@ export function useChessGame() {
                     updatePlayerSkill(quality);
 
                     // Batch state updates - immediate response
+                    setValidMoves([]);
                     setMoveHistory(prev => [...prev, newHistoryEntry]);
                     setCurrentEval(newEval);
                     setWinProbability(newWinProb);
@@ -767,12 +784,17 @@ export function useChessGame() {
         // Select/deselect square
         if (selectedSquare === square) {
             setSelectedSquare(null);
+            setValidMoves([]);
         } else {
             const piece = chess.get(square);
             if (piece && piece.color === 'w') {
                 setSelectedSquare(square);
+                // Get valid moves for the selected square
+                const moves = chess.moves({ square: square, verbose: true });
+                setValidMoves(moves.map(m => m.to));
             } else {
                 setSelectedSquare(null);
+                setValidMoves([]);
             }
         }
     }, [chess, selectedSquare, gameOver, isThinking, turn, currentEval, updateGameState, makeComputerMove, minimax, calculateWinProbability, getGamePhase, updatePlayerSkill]);
@@ -981,6 +1003,7 @@ export function useChessGame() {
         turn: currentState.turn,
         check: currentState.check,
         lastMove: currentState.lastMove,
+        validMoves,
         isLive: currentState.isLive,
 
         // Original functionality

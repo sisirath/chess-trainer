@@ -113,6 +113,38 @@
     z-index: 3;
 }
 
+/* Valid Move Indicators */
+.valid-move-indicator {
+    position: absolute;
+    width: 25%;
+    height: 25%;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 50%;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.square:hover .valid-move-indicator {
+    background: rgba(0, 0, 0, 0.25);
+    transform: scale(1.2);
+}
+
+.square.has-piece .valid-move-indicator {
+    width: 80%;
+    height: 80%;
+    background: transparent;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+}
+
+.theme-modern .valid-move-indicator {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.theme-modern .square.has-piece .valid-move-indicator {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
 /* Last Move Highlighting */
 .last-move::after {
     content: '';

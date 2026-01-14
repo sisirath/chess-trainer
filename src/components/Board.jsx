@@ -7,7 +7,7 @@ const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
 export default function Board({ game, theme, pieceSet = 'neo' }) {
-    const { board, selectedSquare, onSquareClick, lastMove, turn, gameOver, isThinking } = game;
+    const { board, selectedSquare, onSquareClick, lastMove, turn, gameOver, isThinking, validMoves } = game;
     const currentPieceSet = PIECE_SETS[pieceSet] || PIECE_SETS.neo;
     const [draggingPiece, setDraggingPiece] = useState(null);
     const boardGridRef = useRef(null);
@@ -72,6 +72,7 @@ export default function Board({ game, theme, pieceSet = 'neo' }) {
                             const squareName = `${FILES[fileIndex]}${RANKS[rankIndex]}`;
                             const isLight = (rankIndex + fileIndex) % 2 === 0;
                             const isSelected = selectedSquare === squareName;
+                            const isValidMove = validMoves && validMoves.includes(squareName);
                             const isLastMoveFrom = lastMove?.from === squareName;
                             const isLastMoveTo = lastMove?.to === squareName;
                             const isLastMove = isLastMoveFrom || isLastMoveTo;
@@ -82,9 +83,10 @@ export default function Board({ game, theme, pieceSet = 'neo' }) {
                                 <div
                                     key={squareName}
                                     data-square={squareName}
-                                    className={`square ${isLight ? 'light' : 'dark'} ${isSelected ? 'selected' : ''} ${isLastMove ? 'last-move' : ''} ${isLastMoveTo ? 'last-move-to' : ''}`}
+                                    className={`square ${isLight ? 'light' : 'dark'} ${isSelected ? 'selected' : ''} ${isLastMove ? 'last-move' : ''} ${isLastMoveTo ? 'last-move-to' : ''} ${hasPiece ? 'has-piece' : ''}`}
                                     onClick={() => !draggingPiece && onSquareClick(squareName)}
                                 >
+                                    {isValidMove && <div className="valid-move-indicator" />}
                                     {hasPiece && (
                                         <motion.div
                                             className={`piece ${piece.color === 'w' ? 'white' : 'black'} ${isDraggable ? 'draggable' : ''} ${draggingPiece === squareName ? 'dragging' : ''}`}
