@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Trophy, RotateCcw, Save, Check } from 'lucide-react';
+import { Trophy, RotateCcw, Save, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import './AnalysisPanel.css';
 import OpeningExplorer from './analysis/OpeningExplorer';
 import WinProbabilityWidget from './analysis/WinProbabilityWidget';

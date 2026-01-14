@@ -680,7 +680,7 @@ export function useChessGame() {
     }, []);
 
     const onSquareClick = useCallback((square) => {
-        if (gameOver || isThinking || turn !== 'w') return;
+        if (gameOver || isThinking || turn !== 'w' || isReviewing) return;
 
         if (selectedSquare) {
             try {
@@ -912,8 +912,10 @@ export function useChessGame() {
 
     const nextMove = useCallback(() => {
         setViewMoveIndex(current => {
-            if (current === null) return null; // Already live
-            if (current >= moveHistory.length - 1) return null; // Switch to live
+            if (current === null || current >= moveHistory.length - 1) {
+                setIsReviewing(false);
+                return null;
+            }
             return current + 1;
         });
     }, [moveHistory.length]);
@@ -1055,8 +1057,7 @@ export function useChessGame() {
         setBeastMode,
 
         // Navigation
-        viewMoveIndex: viewMoveIndex === null ? moveHistory.length - 1 : viewMoveIndex, // Normalize for UI
-        isReviewing: viewMoveIndex !== null,
+        viewMoveIndex,
         goToMove,
         nextMove,
         prevMove,

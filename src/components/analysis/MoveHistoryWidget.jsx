@@ -103,7 +103,7 @@ export default function MoveHistoryWidget({
                                             key={originalIndex}
                                             id={`move-${originalIndex}`}
                                             className={`interactive-move-card ${isExpanded ? 'expanded' : ''} ${isActive ? 'active-move' : ''}`}
-                                            onClick={() => !alwaysExpand && handleMoveClick(originalIndex)}
+                                            onClick={() => handleMoveClick(originalIndex)}
                                             layout
                                         >
                                             <div className="card-top">
