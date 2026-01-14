@@ -70,6 +70,38 @@
     border-color: rgba(108, 92, 231, 0.2);
 }
 
+.review-header {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(108, 92, 231, 0.1));
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+.review-icon {
+    color: #ffd700;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+}
+
+.review-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.review-move-counter {
+    font-size: 0.75rem;
+    font-weight: 800;
+    min-width: 4.5rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+
+.exit-review-btn {
+    box-shadow: 0 0 15px rgba(108, 92, 231, 0.3);
+}
+
 .logo-section {
     display: flex;
     align-items: center;
@@ -96,46 +128,6 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-}
-
-.review-badge {
-    padding: 0.2rem 0.5rem;
-    background: var(--color-accent);
-    color: white;
-    font-size: 0.6rem;
-    font-weight: 800;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 10px rgba(0, 206, 201, 0.3);
-    animation: fadeIn 0.3s ease-out;
-}
-
-.exit-review-btn {
-    background: var(--color-accent) !important;
-    font-weight: 700 !important;
-    animation: slideInTop 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideInTop {
-    from {
-        transform: translateY(-10px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
 }
 
 .icon-btn-mini {
@@ -941,6 +933,29 @@
     box-shadow: 0 0 5px var(--color-accent);
 }
 
+.review-active-glow {
+    width: 8px;
+    height: 8px;
+    background: #ffd700;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #ffd700, 0 0 4px #fff;
+    animation: activeGlowPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes activeGlowPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.3);
+        opacity: 0.7;
+    }
+}
+
 /* Opening Explorer Styles */
 .opening-explorer {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
@@ -960,6 +975,7 @@
     color: #fff;
     background: linear-gradient(90deg, #fff, var(--color-text-secondary));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 

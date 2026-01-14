@@ -12,7 +12,7 @@ export default function HintWidget({
     dragHandleProps,
     pieceSet = 'neo'
 }) {
-    const { analyzeBestMoves, fen, turn, isThinking } = game;
+    const { analyzeBestMoves, fen, turn, isThinking, isReviewing } = game;
     const [hints, setHints] = useState([]);
     const [isEnabled, setIsEnabled] = useState(false);
     const [expandedHint, setExpandedHint] = useState(null);
@@ -20,16 +20,18 @@ export default function HintWidget({
 
     // Auto-expand/collapse of the widget container when the engine is toggled
     useEffect(() => {
-        if (isEnabled && collapsed) {
+        if ((isEnabled || isReviewing) && collapsed) {
             onToggle();
-        } else if (!isEnabled && !collapsed) {
+        } else if (!(isEnabled || isReviewing) && !collapsed) {
             onToggle();
         }
-    }, [isEnabled, collapsed, onToggle]);
+    }, [isEnabled, isReviewing, collapsed, onToggle]);
 
     // Re-analyze when position changes if enabled
     useEffect(() => {
-        if (isEnabled && !isThinking && !game.gameOver && typeof analyzeBestMoves === 'function') {
+        const shouldAnalyze = (isEnabled || isReviewing) && !isThinking && !game.gameOver && typeof analyzeBestMoves === 'function';
+
+        if (shouldAnalyze) {
             setAnalyzing(true);
             // Small delay to allow UI to render the loading state
             setTimeout(() => {
@@ -39,10 +41,10 @@ export default function HintWidget({
                 }
                 setAnalyzing(false);
             }, 100);
-        } else if (!isEnabled) {
+        } else if (!isEnabled && !isReviewing) {
             setHints([]);
         }
-    }, [fen, isEnabled, isThinking, analyzeBestMoves, game.gameOver]);
+    }, [fen, isEnabled, isReviewing, isThinking, analyzeBestMoves, game.gameOver]);
 
     const getPieceIcon = (moveSan) => {
         // If it's O-O or O-O-O, it's a King move
@@ -108,7 +110,7 @@ export default function HintWidget({
 
             {!collapsed && (
                 <div className="widget-content" style={{ overflowY: 'auto' }}>
-                    {!isEnabled ? (
+                    {(!isEnabled && !isReviewing) ? (
                         <div className="empty-state">
                             <p style={{ opacity: 0.6, fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>
                                 Toggle ON to see best moves and educational explanations.

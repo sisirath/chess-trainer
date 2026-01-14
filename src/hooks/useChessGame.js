@@ -94,6 +94,7 @@ export function useChessGame() {
     const [currentEval, setCurrentEval] = useState(0);
     const [lastMove, setLastMove] = useState(null);
     const [validMoves, setValidMoves] = useState([]);
+    const [isReviewing, setIsReviewing] = useState(false);
 
     // Player skill tracking with smoothing
     const playerSkillRef = useRef(1200);
@@ -809,6 +810,7 @@ export function useChessGame() {
         setCurrentEval(0);
         setIsThinking(false);
         setLastMove(null);
+        setIsReviewing(false);
         // Reset skill tracking
         playerSkillRef.current = 1200;
         recentMovesRef.current = [];
@@ -896,10 +898,17 @@ export function useChessGame() {
     const goToMove = useCallback((index) => {
         if (index >= -1 && index < moveHistory.length) {
             setViewMoveIndex(index);
+            setIsReviewing(true);
         } else if (index === null || index >= moveHistory.length) {
             setViewMoveIndex(null); // Go to live
+            setIsReviewing(false);
         }
     }, [moveHistory.length]);
+
+    const exitReview = useCallback(() => {
+        setViewMoveIndex(null);
+        setIsReviewing(false);
+    }, []);
 
     const nextMove = useCallback(() => {
         setViewMoveIndex(current => {
@@ -911,6 +920,7 @@ export function useChessGame() {
 
     const prevMove = useCallback(() => {
         setViewMoveIndex(current => {
+            setIsReviewing(true);
             if (current === null) {
                 // From live to last move
                 return moveHistory.length > 0 ? moveHistory.length - 1 : -1;
@@ -919,6 +929,22 @@ export function useChessGame() {
             return current - 1;
         });
     }, [moveHistory.length]);
+
+    // Keyboard Navigation
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowRight') {
+                nextMove();
+            } else if (e.key === 'ArrowLeft') {
+                prevMove();
+            } else if (e.key === 'Escape') {
+                exitReview();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [nextMove, prevMove, exitReview]);
 
     // Auto-exit review mode if a new move is made (though onSquareClick checks isLive)
     useEffect(() => {
@@ -1005,6 +1031,8 @@ export function useChessGame() {
         lastMove: currentState.lastMove,
         validMoves,
         isLive: currentState.isLive,
+        isReviewing,
+        exitReview,
 
         // Original functionality
         gameOver,

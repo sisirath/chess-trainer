@@ -115,7 +115,7 @@ export default function MoveHistoryWidget({
                                                     </div>
                                                 )}
                                                 <div className="expand-icon">
-                                                    {isActive && <div className="active-indicator" />}
+                                                    {isActive && <div className="review-active-glow" />}
                                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </div>
                                             </div>

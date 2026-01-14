@@ -15,7 +15,7 @@ export default function AnalysisPanel({
     setPieceSet = () => { }
 }) {
     if (!game) return null;
-    const { moveHistory, winProbability, isThinking, moveStats, resetGame, undoMove, beastMode, setBeastMode, viewMoveIndex, goToMove, nextMove, prevMove, makeMove } = game;
+    const { moveHistory, winProbability, isThinking, moveStats, resetGame, undoMove, beastMode, setBeastMode, viewMoveIndex, goToMove, nextMove, prevMove, makeMove, isReviewing, exitReview } = game;
 
     const panelRef = useRef(null);
     const [layoutSaved, setLayoutSaved] = useState(false);
@@ -260,52 +260,63 @@ export default function AnalysisPanel({
 
     return (
         <div className="analysis-panel glass-panel">
-            {/* Training Header - Fixed height */}
-            <div className="analysis-widget training-header-widget">
-                <div className="logo-section">
-                    <Trophy size={20} className="logo-icon" />
-                    <h1>Chess Trainer</h1>
-                    {viewMoveIndex !== null && (
-                        <div className="review-badge">
-                            REVIEW MODE
-                        </div>
-                    )}
-                </div>
+            {/* Header - Changes based on review mode */}
+            {!isReviewing ? (
+                <div className="analysis-widget training-header-widget">
+                    <div className="logo-section">
+                        <Trophy size={20} className="logo-icon" />
+                        <h1>Chess Trainer</h1>
+                    </div>
 
-                {viewMoveIndex !== null && (
                     <button
-                        className="btn-primary btn-mini exit-review-btn"
-                        onClick={() => goToMove(null)}
+                        className="btn-secondary icon-btn-mini"
+                        onClick={handleSaveLayout}
+                        title="Save Layout"
+                        style={{
+                            padding: '0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: layoutSaved ? '#4ade80' : 'inherit',
+                            borderColor: layoutSaved ? 'rgba(74, 222, 128, 0.3)' : 'inherit'
+                        }}
                     >
-                        Return to Live
+                        {layoutSaved ? <Check size={14} /> : <Save size={14} />}
                     </button>
-                )}
 
-                <button
-                    className="btn-secondary icon-btn-mini"
-                    onClick={handleSaveLayout}
-                    title="Save Layout"
-                    style={{
-                        padding: '0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: layoutSaved ? '#4ade80' : 'inherit',
-                        borderColor: layoutSaved ? 'rgba(74, 222, 128, 0.3)' : 'inherit'
-                    }}
-                >
-                    {layoutSaved ? <Check size={14} /> : <Save size={14} />}
-                </button>
+                    <div className="controls-section">
+                        <button className="btn-secondary icon-btn-mini" onClick={undoMove} title="Undo Move">
+                            <RotateCcw size={14} />
+                        </button>
+                        <button className="btn-primary btn-mini" onClick={resetGame}>
+                            New Game
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="analysis-widget training-header-widget review-header">
+                    <div className="logo-section">
+                        <Trophy size={20} className="logo-icon review-icon" />
+                        <h1>Game Review</h1>
+                    </div>
 
-                <div className="controls-section">
-                    <button className="btn-secondary icon-btn-mini" onClick={undoMove} title="Undo Move">
-                        <RotateCcw size={14} />
-                    </button>
-                    <button className="btn-primary btn-mini" onClick={resetGame}>
-                        New Game
+                    <div className="review-navigation">
+                        <button className="icon-btn-mini" onClick={prevMove} title="Previous Move">
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="review-move-counter">
+                            {viewMoveIndex === -1 ? 'Start' : `Move ${Math.floor(viewMoveIndex / 2) + 1}`}
+                        </div>
+                        <button className="icon-btn-mini" onClick={nextMove} title="Next Move">
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+
+                    <button className="btn-primary btn-mini exit-review-btn" onClick={exitReview}>
+                        Exit Review
                     </button>
                 </div>
-            </div>
+            )}
 
 
             {widgetOrder.map((id, index) => renderWidget(id, index))}
