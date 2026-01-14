@@ -129,8 +129,6 @@ export function useChessGame() {
     // Evaluate board position
     const evaluateBoard = useCallback((game) => {
         if (game.isCheckmate()) {
-            // If it's checkmate, the side that JUST moved won.
-            // game.turn() returns the side whose turn it is NOW (the loser).
             return game.turn() === 'w' ? -1000000 : 1000000;
         }
 
@@ -150,15 +148,26 @@ export function useChessGame() {
             k: KING_TABLE_MID
         };
 
+        let whiteMaterial = 0;
+        let blackMaterial = 0;
+        let whiteKingPos = { r: 0, c: 0 };
+        let blackKingPos = { r: 0, c: 0 };
+
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = board[row][col];
                 if (piece) {
                     let value = PIECE_VALUES[piece.type] || 0;
+                    if (piece.color === 'w') {
+                        whiteMaterial += value;
+                        if (piece.type === 'k') whiteKingPos = { r: row, c: col };
+                    } else {
+                        blackMaterial += value;
+                        if (piece.type === 'k') blackKingPos = { r: row, c: col };
+                    }
 
                     const table = TABLES[piece.type];
                     if (table) {
-                        // Standardize table access: Black perspective is upside down
                         const tableIdx = piece.color === 'w' ? (row * 8 + col) : ((7 - row) * 8 + col);
                         value += table[tableIdx];
                     }
@@ -166,6 +175,30 @@ export function useChessGame() {
                     score += piece.color === 'w' ? value : -value;
                 }
             }
+        }
+
+        // === MOP-UP LOGIC: Forced mate with lone king ===
+        // If AI (black) has huge advantage and White only has a king
+        if (blackMaterial > whiteMaterial + 500 && whiteMaterial === 20000) {
+            // Reward pushing white king to edges
+            const rowDist = Math.max(whiteKingPos.r, 7 - whiteKingPos.r);
+            const colDist = Math.max(whiteKingPos.c, 7 - whiteKingPos.c);
+            const edgeBonus = (rowDist + colDist) * 10;
+            score -= edgeBonus; // Negative is good for black
+
+            // Reward bringing black king closer to white king
+            const dist = Math.abs(blackKingPos.r - whiteKingPos.r) + Math.abs(blackKingPos.c - whiteKingPos.c);
+            score += dist * 10; // Reducing distance is good for black
+        }
+        // If Player (white) has advantage (unlikely for this bug report but good for completeness)
+        else if (whiteMaterial > blackMaterial + 500 && blackMaterial === 20000) {
+            const rowDist = Math.max(blackKingPos.r, 7 - blackKingPos.r);
+            const colDist = Math.max(blackKingPos.c, 7 - blackKingPos.c);
+            const edgeBonus = (rowDist + colDist) * 10;
+            score += edgeBonus;
+
+            const dist = Math.abs(blackKingPos.r - whiteKingPos.r) + Math.abs(blackKingPos.c - whiteKingPos.c);
+            score -= dist * 10;
         }
 
         return score;
@@ -184,7 +217,11 @@ export function useChessGame() {
         }
 
         if (depth === 0 || game.isGameOver()) {
-            return { score: evaluateBoard(game), pv: [] };
+            let score = evaluateBoard(game);
+            // Adjust mate score for depth (prefer shorter mates)
+            if (score > 900000) score += depth;
+            if (score < -900000) score -= depth;
+            return { score, pv: [] };
         }
 
         const moves = game.moves();
@@ -257,11 +294,22 @@ export function useChessGame() {
         const moves = game.moves({ verbose: true });
         if (moves.length === 0) return null;
 
-        // Beast mode uses MAXIMUM depth for crushing difficulty
-        let depth = beastMode ? 4 : 3;
+        // Dynamic depth: Increase depth in endgame (few pieces)
+        let baseDepth = beastMode ? 4 : 3;
+        const board = game.board();
+        let pieceCount = 0;
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) if (board[r][c]) pieceCount++;
+        }
+
+        // Deeper search when material is low to find forced mates
+        if (pieceCount <= 8) baseDepth += 2;
+        else if (pieceCount <= 12) baseDepth += 1;
+
+        let depth = baseDepth;
         const moveCount = game.history().length;
-        if (!beastMode && playerSkillRef.current > 1800) depth = 4;
-        if (!beastMode && moveCount < 10) depth = Math.min(depth, 3); // Faster opening moves only in normal mode
+        if (!beastMode && playerSkillRef.current > 1800 && pieceCount > 12) depth = 4;
+        if (!beastMode && moveCount < 10 && !beastMode) depth = Math.min(depth, 3);
 
         // Check for position repetition (detect if we're stuck in a loop)
         const currentPosition = game.fen().split(' ')[0]; // Board position only
@@ -299,10 +347,10 @@ export function useChessGame() {
 
         let selectedMove;
 
-        // === CRITICAL: Check for immediate mate or crushing advantage ===
-        const immediateMate = scoredMoves.find(m => m.score <= -900000);
-        if (immediateMate) {
-            return { move: immediateMate.move, score: immediateMate.score };
+        // === CRITICAL: Check for mate or crushing advantage ===
+        // If there's a mate or near-mate, TAKE IT IMMEDIATELY regardless of mode
+        if (scoredMoves[0].score <= -900000) {
+            return { move: scoredMoves[0].move, score: scoredMoves[0].score };
         }
 
         // === BEAST MODE: Play the absolute best move always ===
